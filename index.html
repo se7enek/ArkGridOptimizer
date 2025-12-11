@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Astrogems Optimizer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-cube"></i> Ark Grid Core Astrogems Optimizer</h1>
+            <p class="subtitle">Add astrogems with willpower cost and order points, then optimize their distribution into 3 cores with max 4 astrogems each, using tiered thresholds based on core rarity.</p>
+        </header>
+        
+        <div class="app-description">
+            <h2>How to use this tool:</h2>
+            <ol>
+                <li>Add astrogems with their order and willpower cost</li>
+                <li>Set capacity tier for each core (Epic, Legendary, Relic, or Ancient)</li>
+                <li>Set priority for each core</li>
+                <li>Click "Calculate Optimal Cores" to distribute objects</li>
+                <li>Review the results in the "Optimized Cores" section</li>
+            </ol>
+        </div>
+        
+        <div class="main-content">
+            <div class="panel">
+                <h2><i class="fas fa-plus-circle"></i> Add Objects</h2>
+                
+                <div class="object-inputs">
+                    <div class="form-group">
+                        <label for="objectValue">Value</label>
+                        <input type="number" id="objectValue" min="1" placeholder="e.g., 7">
+                    </div>
+                    <div class="form-group">
+                        <label for="objectCost">Cost</label>
+                        <input type="number" id="objectCost" min="1" placeholder="e.g., 10">
+                    </div>
+                </div>
+                
+                <div class="dropdown-inputs">
+                    <div class="form-group">
+                        <label for="objectOption1">Option 1 (todo)</label>
+                        <select id="objectOption1">
+                            <option value="">Select...</option>
+                            <option value="a">Option A</option>
+                            <option value="b">Option B</option>
+                            <option value="c">Option C</option>
+                            <option value="d">Option D</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="objectOption2">Option 2 (todo)</label>
+                        <select id="objectOption2">
+                            <option value="">Select...</option>
+                            <option value="a">Option A</option>
+                            <option value="b">Option B</option>
+                            <option value="c">Option C</option>
+                            <option value="d">Option D</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button id="addObjectBtn" class="button">
+                    <i class="fas fa-plus"></i> Add Astrogem
+                </button>
+                
+                <div class="objects-list" id="objectsList">
+                    <div class="empty-message" id="emptyObjectsMessage">
+                        <i class="fas fa-box-open fa-2x"></i>
+                        <p>No astrogems added yet. Start by adding your first above.</p>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <button id="clearObjectsBtn" class="button button-danger">
+                        <i class="fas fa-trash"></i> Clear All Gems
+                    </button>
+                    <button id="addSampleBtn" class="button">
+                        <i class="fas fa-flask"></i> Add Sample Gems
+                    </button>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <div class="threshold-info">
+                    <h3><i class="fas fa-bullseye"></i> Tiered Value Targets</h3>
+                    <p>The algorithm uses different value targets based on core capacity tier:</p>
+                    <div class="threshold-rule">
+                        <strong><span class="tier-name epic">Epic (9):</span></strong> Target value = 10
+                    </div>
+                    <div class="threshold-rule">
+                        <strong><span class="tier-name legendary">Legendary (12):</span></strong> Target value = 14
+                    </div>
+                    <div class="threshold-rule">
+                        <strong><span class="tier-name relic">Relic (15):</span></strong> Target value = 17
+                    </div>
+                    <div class="threshold-rule">
+                        <strong><span class="tier-name ancient">Ancient (17):</span></strong> Target value = 19
+                    </div>
+                </div>
+                
+                <h2><i class="fas fa-sliders-h"></i> Core Configuration</h2>
+                
+                <h3>Core Rarity Tier</h3>
+                <div class="capacity-controls">
+                    <div class="form-group">
+                        <label for="capacity1">Core 1 Capacity</label>
+                        <select id="capacity1" class="capacity-select">
+                            <option value="9" data-tier="epic">Epic (9)</option>
+                            <option value="12" data-tier="legendary">Legendary (12)</option>
+                            <option value="15" data-tier="relic" selected>Relic (15)</option>
+                            <option value="17" data-tier="ancient">Ancient (17)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="capacity2">Core 2 Capacity</label>
+                        <select id="capacity2" class="capacity-select">
+                            <option value="9" data-tier="epic" selected>Epic (9)</option>
+                            <option value="12" data-tier="legendary">Legendary (12)</option>
+                            <option value="15" data-tier="relic">Relic (15)</option>
+                            <option value="17" data-tier="ancient">Ancient (17)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="capacity3">Core 3 Capacity</label>
+                        <select id="capacity3" class="capacity-select">
+                            <option value="9" data-tier="epic">Epic (9)</option>
+                            <option value="12" data-tier="legendary">Legendary (12)</option>
+                            <option value="15" data-tier="relic">Relic (15)</option>
+                            <option value="17" data-tier="ancient" selected>Ancient (17)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <h3>Core Priority</h3>
+                <div class="priority-controls">
+                    <div class="form-group">
+                        <label for="priority1">Core 1 Priority</label>
+                        <select id="priority1">
+                            <option value="3" selected>High</option>
+                            <option value="2">Mid</option>
+                            <option value="1">Low</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="priority2">Core 2 Priority</label>
+                        <select id="priority2">
+                            <option value="3">High</option>
+                            <option value="2" selected>Mid</option>
+                            <option value="1">Low</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="priority3">Core 3 Priority</label>
+                        <select id="priority3">
+                            <option value="3">High</option>
+                            <option value="2">Mid</option>
+                            <option value="1" selected>Low</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button id="calculateBtn" class="button button-success" style="width: 100%; padding: 15px;">
+                    <i class="fas fa-calculator"></i> Calculate Optimal Cores
+                </button>
+                
+                <div id="resultsPanel">
+                    <h2 style="margin-top: 30px;"><i class="fas fa-chart-pie"></i> Optimized Cores</h2>
+                    
+                    <div class="groups-container">
+                        <div class="group group-1">
+                            <div class="group-header">
+                                <div class="group-title">#1</div>
+                                <div class="group-priority">Priority: <span id="group1PriorityDisplay">High</span></div>
+                            </div>
+                            <div class="group-stats">
+                                <div><span id="group1Capacity">Relic (15)</span></div>
+                                <div><span id="group1Used">0</span> / <span id="group1Value">0</span></div>
+                            </div>
+							<div>
+                                <span id="group1ValueIndicator" class="value-indicator"></span>
+                            </div>
+                            <div class="group-objects" id="group1Objects">
+                                <div class="empty-message">No astrogems assigned yet<br><br>Use the button above</div>
+                            </div>
+                        </div>
+                        
+						<div class="group group-2">
+                            <div class="group-header">
+                                <div class="group-title">#2</div>
+                                <div class="group-priority">Priority: <span id="group2PriorityDisplay">Mid</span></div>
+                            </div>
+                            <div class="group-stats">
+                                <div><span id="group2Capacity">Relic (15)</span></div>
+                                <div><span id="group2Used">0</span> / <span id="group2Value">0</span></div>
+                            </div>
+							<div>
+                                <span id="group2ValueIndicator" class="value-indicator"></span>
+                            </div>
+                            <div class="group-objects" id="group2Objects">
+                                <div class="empty-message">No astrogems assigned yet<br><br>Use the button above</div>
+                            </div>
+                        </div>
+						
+                        <div class="group group-3">
+                            <div class="group-header">
+                                <div class="group-title">#3</div>
+                                <div class="group-priority">Priority: <span id="group3PriorityDisplay">Low</span></div>
+                            </div>
+                            <div class="group-stats">
+                                <div><span id="group3Capacity">Relic (15)</span></div>
+                                <div><span id="group3Used">0</span> / <span id="group3Value">0</span></div>
+                            </div>
+							<div>
+                                <span id="group3ValueIndicator" class="value-indicator"></span>
+                            </div>
+                            <div class="group-objects" id="group3Objects">
+                                <div class="empty-message">No astrogems assigned yet<br><br>Use the button above</div>
+                            </div>
+                        </div>
+                        
+                        
+                    </div>
+                    
+                    <div class="results-summary">
+                        <div class="summary-item">
+                            <div class="summary-value" id="totalValue">0</div>
+                            <div class="summary-label">Total Points</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-value" id="totalCost">0</div>
+                            <div class="summary-label">Total Cost</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-value" id="objectsAssigned">0/12</div>
+                            <div class="summary-label">Astrogems Assigned</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Ark Grid Core Optimizer &copy; 2025 | Tiered thresholds based on capacity tiers: Epic(10), Legendary(14), Relic(17), Ancient(19) | Data saved locally</p>
+        </footer>
+    </div>
+    
+    <div id="notification" class="notification">
+        <i class="fas fa-check-circle"></i>
+        <div class="notification-content">Notification message here</div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
