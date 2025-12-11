@@ -721,7 +721,7 @@ function renderGroupObjects() {
             objectElement.innerHTML = `
                 <div>
                     <div class="group-object-details">Gem ID #${object.id}</div>
-                    <div class="group-object-details">Cost: ${object.cost}, Value: ${object.value}</div>
+                    <div class="group-object-details">Cost: ${object.cost}, Points: ${object.value}</div>
                     ${tags.length > 0 ? `
                         <div class="group-object-tags">
                             ${tags.map(tag => `<span class="group-object-tag">${tag}</span>`).join('')}
