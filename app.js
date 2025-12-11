@@ -321,6 +321,7 @@ function addObject() {
     // Update UI
     renderObjectsList();
     saveToLocalStorage();
+	//Changing add/save button
     if (addObjectBtn.innerHTML == '\n<i class="fas fa-floppy-disk"></i> Save Astrogem\n')
 		showNotification(`Astrogem #${objectId} saved successfully!`, 'success');
 	else 
