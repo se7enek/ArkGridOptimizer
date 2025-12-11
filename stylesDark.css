@@ -24,8 +24,8 @@
     
     --epic-color: #9b59b6;
     --legendary-color: #f39c12;
-    --relic-color: #3498db;
-    --ancient-color: #e74c3c;
+    --relic-color: #e74c3c;
+    --ancient-color: #ffffff;
     
     --shadow-color: rgba(0, 0, 0, 0.3);
     --shadow-heavy: rgba(0, 0, 0, 0.5);
@@ -264,7 +264,7 @@ input::placeholder {
 
 /* Objects List */
 .objects-list {
-    max-height: 400px;
+    max-height: 800px;
     overflow-y: auto;
     margin-top: 20px;
     border: 1px solid var(--border-color);
@@ -453,7 +453,7 @@ input::placeholder {
 
 .group-objects {
     min-height: 200px;
-    max-height: 250px;
+    max-height: 450px;
     overflow-y: auto;
     padding-right: 5px;
     position: relative;
