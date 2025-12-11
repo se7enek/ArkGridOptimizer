@@ -656,7 +656,7 @@ function updateGroupDisplays() {
         const tierConfig = getTierConfig(group.capacity);
         
         // Update capacity display with tier name and color
-        groupCapacityDisplays[index].textContent = `${tierConfig.name} (${group.capacity})`;
+        groupCapacityDisplays[index].textContent = `${tierConfig.name}`;
         groupCapacityDisplays[index].className = tierConfig.colorClass;
         
         groupUsedDisplays[index].textContent = group.used;
