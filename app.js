@@ -739,7 +739,7 @@ function renderGroupObjects() {
         countElement.style.marginTop = '10px';
         countElement.style.fontSize = '0.85rem';
         countElement.style.opacity = '0.8';
-        countElement.textContent = `${group.objects.length} of ${group.maxObjects} objects`;
+        countElement.textContent = `${group.objects.length} of ${group.maxObjects} astrogems`;
         container.appendChild(countElement);
     });
 }
