@@ -1676,55 +1676,110 @@ function updateGroupDisplays() {
         const valueIndicator = groupValueIndicators[index];
         const target = group.targetValue;
         const diff = group.value - target;
+        const absDiff = Math.abs(diff);
         
-        // Determine which threshold level group is at
-        let targetText = `Target: ${target}`;
+        // For display purposes, Ancient has a special "perfect" value of 20
+        // even though its target for calculations is 19
+        const displayTarget = group.capacity === 17 ? 20 : target;
+        const displayDiff = group.value - displayTarget;
+        const displayAbsDiff = Math.abs(displayDiff);
         
-        // Define what counts as "close enough" to the target
-        // For Ancient (19): 18-20 is "close", 19 is "perfect"
-        // For Relic (17): 16-18 is "close", 17 is "perfect"
-        // For Epic/Legendary (14): 13-15 is "close", 14 is "perfect"
+        // Determine which tier we're dealing with
+        const isAncient = group.capacity === 17;
+        const isRelic = group.capacity === 15;
+        const isEpicOrLegendary = group.capacity === 9 || group.capacity === 12;
         
-        let isCloseEnough = false;
-        let isPerfect = false;
-        
-        if (target === 19) { // Ancient
-            isPerfect = group.value === 19;
-            isCloseEnough = group.value >= 18 && group.value <= 20;
-        } else if (target === 17) { // Relic
-            isPerfect = group.value === 17;
-            isCloseEnough = group.value >= 16 && group.value <= 18;
-        } else if (target === 14) { // Epic/Legendary
-            isPerfect = group.value === 14;
-            isCloseEnough = group.value >= 13 && group.value <= 15;
-        } else { // Custom override targets
-            isPerfect = group.value === target;
-            isCloseEnough = Math.abs(diff) <= 2; // Within ±2
-        }
-        
-        if (isPerfect) {
-            // Perfect hit
-            valueIndicator.textContent = `✓ Perfect ${targetText}`;
-            valueIndicator.className = "value-indicator value-good";
-        } else if (isCloseEnough) {
-            // Close enough (within acceptable range)
-            valueIndicator.textContent = `✓ Close ${targetText}`;
-            valueIndicator.className = "value-indicator value-good";
-        } else if (diff > 0) {
-            // Above target (but not close enough)
-            valueIndicator.textContent = `${targetText}, +${diff} over`;
-            valueIndicator.className = "value-indicator value-excess";
+        if (isAncient) {
+            // Ancient tier special rules:
+            // - 20 is "perfect" (even though target is 19)
+            // - 19 is "close" 
+            // - 18-21 is "acceptable"
+            // - Otherwise show under/over
+            
+            if (group.value === 20) {
+                valueIndicator.textContent = `✓ Perfect! 20`;
+                valueIndicator.className = "value-indicator value-perfect";
+            } else if (group.value === 19) {
+                valueIndicator.textContent = `≈ Close 19/20`;
+                valueIndicator.className = "value-indicator value-close";
+            } else if (group.value >= 18 && group.value <= 21) {
+                valueIndicator.textContent = `~ ${group.value}/20`;
+                valueIndicator.className = "value-indicator value-acceptable";
+            } else if (group.value < 18) {
+                valueIndicator.textContent = `↓ ${20 - group.value} under 20`;
+                valueIndicator.className = "value-indicator value-warning";
+            } else {
+                valueIndicator.textContent = `↑ ${group.value - 20} over 20`;
+                valueIndicator.className = "value-indicator value-excess";
+            }
+            
+        } else if (isRelic) {
+            // Relic tier: target 17
+            if (group.value === 17) {
+                valueIndicator.textContent = `✓ Perfect! 17`;
+                valueIndicator.className = "value-indicator value-perfect";
+            } else if (group.value === 16 || group.value === 18) {
+                valueIndicator.textContent = `≈ Close ${group.value}/17`;
+                valueIndicator.className = "value-indicator value-close";
+            } else if (group.value >= 15 && group.value <= 19) {
+                valueIndicator.textContent = `~ ${group.value}/17`;
+                valueIndicator.className = "value-indicator value-acceptable";
+            } else if (group.value < 15) {
+                valueIndicator.textContent = `↓ ${17 - group.value} under 17`;
+                valueIndicator.className = "value-indicator value-warning";
+            } else {
+                valueIndicator.textContent = `↑ ${group.value - 17} over 17`;
+                valueIndicator.className = "value-indicator value-excess";
+            }
+            
+        } else if (isEpicOrLegendary) {
+            // Epic/Legendary tier: target 14
+            if (group.value === 14) {
+                valueIndicator.textContent = `✓ Perfect! 14`;
+                valueIndicator.className = "value-indicator value-perfect";
+            } else if (group.value === 13 || group.value === 15) {
+                valueIndicator.textContent = `≈ Close ${group.value}/14`;
+                valueIndicator.className = "value-indicator value-close";
+            } else if (group.value >= 12 && group.value <= 16) {
+                valueIndicator.textContent = `~ ${group.value}/14`;
+                valueIndicator.className = "value-indicator value-acceptable";
+            } else if (group.value < 12) {
+                valueIndicator.textContent = `↓ ${14 - group.value} under 14`;
+                indicatorClass = 'value-warning';
+            } else {
+                valueIndicator.textContent = `↑ ${group.value - 14} over 14`;
+                valueIndicator.className = "value-indicator value-excess";
+            }
+            
         } else {
-            // Below target
-            valueIndicator.textContent = `${targetText}, ${Math.abs(diff)} under`;
-            valueIndicator.className = "value-indicator value-warning";
+            // Custom override targets
+            if (group.value === target) {
+                valueIndicator.textContent = `✓ Perfect! ${target}`;
+                valueIndicator.className = "value-indicator value-perfect";
+            } else if (Math.abs(diff) <= 1) {
+                valueIndicator.textContent = `≈ Close ${group.value}/${target}`;
+                valueIndicator.className = "value-indicator value-close";
+            } else if (Math.abs(diff) <= 2) {
+                valueIndicator.textContent = `~ ${group.value}/${target}`;
+                valueIndicator.className = "value-indicator value-acceptable";
+            } else if (diff < 0) {
+                valueIndicator.textContent = `↓ ${absDiff} under ${target}`;
+                valueIndicator.className = "value-indicator value-warning";
+            } else {
+                valueIndicator.textContent = `↑ ${absDiff} over ${target}`;
+                valueIndicator.className = "value-indicator value-excess";
+            }
         }
         
-        // Special case: For Ancient (19), value of 18 should show as "under"
-        if (target === 19 && group.value === 18) {
-            valueIndicator.textContent = `${targetText}, 1 under`;
-            valueIndicator.className = "value-indicator value-warning";
+        // Add tooltip showing both display and calculation targets for Ancient
+        let tooltip = `Value: ${group.value}`;
+        if (isAncient) {
+            tooltip += `\nDisplay Target: 20 (Perfect)\nCalculation Target: 19`;
+        } else {
+            tooltip += `\nTarget: ${target}`;
         }
+        tooltip += `\nCapacity: ${group.capacity} (${tierConfig.name})`;
+        valueIndicator.title = tooltip;
     });
     
     updatePriorityDisplays();
