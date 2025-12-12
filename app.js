@@ -572,7 +572,10 @@ function renderPresetSlots() {
 				<div class="object-id">Date: ${dateStr}</div>
             </div>
             <div class="object-actions">
-                <button class="btn-icon btn-edit" onclick="loadPreset(${preset.id})" title="Load Preset">
+                <button class="btn-icon preset-slot-btn preset-slot-btn-overwrite" onclick="overwritePreset(${preset.id})" title="Overwrite preset">
+        			<i class="fas fa-save"></i>
+    			</button>
+				<button class="btn-icon btn-edit" onclick="loadPreset(${preset.id})" title="Load Preset">
                     <i class="fas fa-file-import"></i>
                 </button>
                 <button class="btn-icon preset-slot-btn-delete" onclick="deletePreset(${preset.id})" title="Delete Preset">
