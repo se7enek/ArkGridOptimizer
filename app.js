@@ -301,6 +301,83 @@ function savePreset(name) {
     showNotification(`Preset "${name}" saved successfully!`, 'success');
 }
 
+function overwritePreset(presetId) {
+    const preset = presets.find(p => p.id === presetId);
+    if (!preset) {
+        showNotification('Preset not found.', 'error');
+        return;
+    }
+    
+    const currentPresetName = preset.name;
+    
+    if (!confirm(`Overwrite preset "${currentPresetName}" with current settings?`)) {
+        return;
+    }
+    
+    try {
+        // Get target override values
+        const targetOverrideInputs = [
+            document.getElementById('targetOverride1'),
+            document.getElementById('targetOverride2'),
+            document.getElementById('targetOverride3')
+        ];
+        
+        // Update the existing preset with current data
+        const presetIndex = presets.findIndex(p => p.id === presetId);
+        if (presetIndex !== -1) {
+            // Update the preset
+            presets[presetIndex] = {
+                id: presetId,
+                name: currentPresetName,
+                date: new Date().toISOString(),
+                timestamp: Date.now(),
+                objects: JSON.parse(JSON.stringify(objects)), // Deep copy current objects
+                groups: groups.map(group => ({
+                    id: group.id,
+                    tier: group.tier,
+                    capacity: group.capacity,
+                    priority: group.priority,
+                    targetValue: group.targetValue,
+                    used: group.used,
+                    value: group.value,
+                    objects: group.objects ? JSON.parse(JSON.stringify(group.objects)) : []
+                })),
+                settings: {
+                    capacityValues: [
+                        capacityInputs[0]?.value || '15',
+                        capacityInputs[1]?.value || '9',
+                        capacityInputs[2]?.value || '17'
+                    ],
+                    priorityValues: [
+                        priorityInputs[0]?.value || '2',
+                        priorityInputs[1]?.value || '3',
+                        priorityInputs[2]?.value || '1'
+                    ],
+                    targetOverrideValues: targetOverrideInputs ? [
+                        targetOverrideInputs[0]?.value || '',
+                        targetOverrideInputs[1]?.value || '',
+                        targetOverrideInputs[2]?.value || ''
+                    ] : ['', '', '']
+                }
+            };
+            
+            // Update current preset ID
+            currentPresetId = presetId;
+            
+            // Update UI and save to storage
+            renderPresetSlots();
+            savePresetsToStorage();
+            
+            showNotification(`Preset "${currentPresetName}" overwritten successfully!`, 'success');
+            console.log(`Preset "${currentPresetName}" overwritten`);
+        }
+        
+    } catch (error) {
+        console.error('Error overwriting preset:', error);
+        showNotification('Error overwriting preset. Check console for details.', 'error');
+    }
+}
+
 function loadPreset(presetId) {
     console.log('Loading preset:', presetId);
     
