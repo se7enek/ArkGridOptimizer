@@ -1674,43 +1674,79 @@ function updateGroupDisplays() {
         
         // Update value indicator
         const valueIndicator = groupValueIndicators[index];
-        const target = group.targetValue;
+        const target = group.targetValue; // Calculation target (19 for Ancient)
         const diff = group.value - target;
         const absDiff = Math.abs(diff);
-        
-        // For display purposes, Ancient has a special "perfect" value of 20
-        // even though its target for calculations is 19
-        const displayTarget = group.capacity === 17 ? 20 : target;
-        const displayDiff = group.value - displayTarget;
-        const displayAbsDiff = Math.abs(displayDiff);
         
         // Determine which tier we're dealing with
         const isAncient = group.capacity === 17;
         const isRelic = group.capacity === 15;
-        const isEpicOrLegendary = group.capacity === 9 || group.capacity === 12;
+        const isEpic = group.capacity === 9;
+        const isLegendary = group.capacity === 12;
+        const isEpicOrLegendary = isEpic || isLegendary;
+        
+        // RESET - Clear any previous styling
+        valueIndicator.className = "value-indicator";
         
         if (isAncient) {
-            // Ancient tier special rules:
-            // - 20 is "perfect" (even though target is 19)
-            // - 19 is "close" 
-            // - 18-21 is "acceptable"
-            // - Otherwise show under/over
+            // ANCIENT TIER - SPECIAL RULES
+            // Calculation target: 19
+            // Display target: 17 (for indicator purposes)
+            // Perfect display: 20
             
-            if (group.value === 20) {
-                valueIndicator.textContent = `✓ Perfect! 20`;
-                valueIndicator.className = "value-indicator value-perfect";
-            } else if (group.value === 19) {
-                valueIndicator.textContent = `≈ Close 19/20`;
+            const displayTarget = 17; // For indicator display
+            const perfectDisplay = 20; // What shows as "perfect"
+            const displayDiff = group.value - displayTarget;
+            const displayAbsDiff = Math.abs(displayDiff);
+            
+            if (group.value >= perfectDisplay) {
+                // 20 or above is "perfect"
+                if (group.value === perfectDisplay) {
+                    valueIndicator.textContent = `✓ Perfect! 20`;
+                    valueIndicator.className = "value-indicator value-perfect";
+                } else {
+                    valueIndicator.textContent = `↑ ${group.value - perfectDisplay}+ over 20`;
+                    valueIndicator.className = "value-indicator value-excess";
+                }
+            } else if (group.value >= target) {
+                // 19 or above (calculation target reached)
+                if (group.value === target) {
+                    valueIndicator.textContent = `✓ Target 19 (${displayDiff}+2 above 17)`;
+                    valueIndicator.className = "value-indicator value-perfect";
+                } else {
+                    valueIndicator.textContent = `↑ ${group.value - target}+ over 19 (${displayDiff}+2 above 17)`;
+                    valueIndicator.className = "value-indicator value-excess";
+                }
+            } else if (group.value >= displayTarget) {
+                // 17-18 (display target reached or close)
+                if (group.value === displayTarget) {
+                    valueIndicator.textContent = `✓ Target 17`;
+                    valueIndicator.className = "value-indicator value-perfect";
+                } else if (group.value === 18) {
+                    valueIndicator.textContent = `✓ Target 18 (1+ above 17)`;
+                    valueIndicator.className = "value-indicator value-close";
+                }
+            } else if (group.value >= 15) {
+                // 15-16 (close to display target)
+                valueIndicator.textContent = `≈ ${group.value}/17 (${displayTarget - group.value} under)`;
                 valueIndicator.className = "value-indicator value-close";
-            } else if (group.value >= 18 && group.value <= 21) {
-                valueIndicator.textContent = `~ ${group.value}/20`;
+            } else if (group.value >= 10) {
+                // 10-14 (acceptable range)
+                valueIndicator.textContent = `~ ${group.value}/17 (${displayTarget - group.value} under)`;
                 valueIndicator.className = "value-indicator value-acceptable";
-            } else if (group.value < 18) {
-                valueIndicator.textContent = `↓ ${20 - group.value} under 20`;
-                valueIndicator.className = "value-indicator value-warning";
             } else {
-                valueIndicator.textContent = `↑ ${group.value - 20} over 20`;
-                valueIndicator.className = "value-indicator value-excess";
+                // Below 10 (poor)
+                valueIndicator.textContent = `↓ ${group.value}/17 (${displayTarget - group.value} under)`;
+                valueIndicator.className = "value-indicator value-warning";
+            }
+            
+            // Special explicit cases for clarity
+            if (group.value === 18) {
+                valueIndicator.textContent = `✓ Target 18 (1+ above 17)`;
+                valueIndicator.className = "value-indicator value-close";
+            } else if (group.value === 19) {
+                valueIndicator.textContent = `✓ Target 19 (2+ above 17)`;
+                valueIndicator.className = "value-indicator value-perfect";
             }
             
         } else if (isRelic) {
@@ -1745,10 +1781,16 @@ function updateGroupDisplays() {
                 valueIndicator.className = "value-indicator value-acceptable";
             } else if (group.value < 12) {
                 valueIndicator.textContent = `↓ ${14 - group.value} under 14`;
-                indicatorClass = 'value-warning';
+                valueIndicator.className = "value-indicator value-warning";
             } else {
                 valueIndicator.textContent = `↑ ${group.value - 14} over 14`;
                 valueIndicator.className = "value-indicator value-excess";
+            }
+            
+            // EXPLICIT check for value 8
+            if (group.value === 8) {
+                valueIndicator.textContent = `↓ 6 under 14`;
+                valueIndicator.className = "value-indicator value-warning";
             }
             
         } else {
@@ -1756,10 +1798,10 @@ function updateGroupDisplays() {
             if (group.value === target) {
                 valueIndicator.textContent = `✓ Perfect! ${target}`;
                 valueIndicator.className = "value-indicator value-perfect";
-            } else if (Math.abs(diff) <= 1) {
+            } else if (Math.abs(diff) === 1) {
                 valueIndicator.textContent = `≈ Close ${group.value}/${target}`;
                 valueIndicator.className = "value-indicator value-close";
-            } else if (Math.abs(diff) <= 2) {
+            } else if (Math.abs(diff) === 2) {
                 valueIndicator.textContent = `~ ${group.value}/${target}`;
                 valueIndicator.className = "value-indicator value-acceptable";
             } else if (diff < 0) {
@@ -1771,10 +1813,19 @@ function updateGroupDisplays() {
             }
         }
         
-        // Add tooltip showing both display and calculation targets for Ancient
-        let tooltip = `Value: ${group.value}`;
+        // Add tooltip with all relevant information
+        let tooltip = `Current Value: ${group.value}`;
         if (isAncient) {
-            tooltip += `\nDisplay Target: 20 (Perfect)\nCalculation Target: 19`;
+            tooltip += `\nDisplay Reference: 17`;
+            tooltip += `\nPerfect Display: 20`;
+            tooltip += `\nCalculation Target: 19`;
+            tooltip += `\nStatus: ${group.value >= 19 ? "Calculation target met" : group.value >= 17 ? "Display target met" : "Below targets"}`;
+        } else if (isRelic) {
+            tooltip += `\nTarget: 17`;
+            tooltip += `\nStatus: ${group.value === 17 ? "Perfect" : group.value >= 15 ? "Acceptable" : "Below target"}`;
+        } else if (isEpicOrLegendary) {
+            tooltip += `\nTarget: 14`;
+            tooltip += `\nStatus: ${group.value === 14 ? "Perfect" : group.value >= 12 ? "Acceptable" : "Below target"}`;
         } else {
             tooltip += `\nTarget: ${target}`;
         }
