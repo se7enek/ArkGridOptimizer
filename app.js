@@ -1351,12 +1351,7 @@ function calculateOptimalGroups() {
             TIERED_THRESHOLDS[key].capacity === group.capacity
         ) || 'EPIC';
     });
-    
-        
-        group.tier = Object.keys(TIERED_THRESHOLDS).find(key => 
-            TIERED_THRESHOLDS[key].capacity === group.capacity
-        ) || 'EPIC';
-    });
+
     
     console.log('Group configurations:', groups.map(g => ({
         name: g.name,
