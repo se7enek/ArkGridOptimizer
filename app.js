@@ -1323,12 +1323,12 @@ function calculateOptimalGroups() {
     });
     
     // Update groups with current capacity and priority from inputs
-    groups.forEach((group, index) => {
+    /* groups.forEach((group, index) => {
         group.capacity = parseInt(capacityInputs[index].value) || 9;
         group.priority = parseInt(priorityInputs[index].value);
         const tierConfig = getTierConfig(group.capacity);
         
-        // Check for override target value
+        // Check for override target value // temporarily off
         if (targetOverrideInputs && targetOverrideInputs[index]) {
             const overrideValue = parseInt(targetOverrideInputs[index].value);
             if (!isNaN(overrideValue) && overrideValue > 0) {
@@ -1340,7 +1340,18 @@ function calculateOptimalGroups() {
             }
         } else {
             group.targetValue = tierConfig.target;
-        }
+        }*/
+
+		groups.forEach((group, index) => {
+        group.capacity = parseInt(capacityInputs[index].value) || 9;
+        group.priority = parseInt(priorityInputs[index].value);
+        const tierConfig = getTierConfig(group.capacity);
+        group.targetValue = tierConfig.target;
+        group.tier = Object.keys(TIERED_THRESHOLDS).find(key => 
+            TIERED_THRESHOLDS[key].capacity === group.capacity
+        ) || 'EPIC';
+    });
+    
         
         group.tier = Object.keys(TIERED_THRESHOLDS).find(key => 
             TIERED_THRESHOLDS[key].capacity === group.capacity
