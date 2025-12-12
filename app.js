@@ -37,7 +37,7 @@ let groups = [
         priority: 3, 
         objects: [], 
         maxObjects: MAX_OBJECTS_PER_GROUP, 
-        targetValue: 14 
+        targetValue: 10 
     },
     { 
         id: 3, 
