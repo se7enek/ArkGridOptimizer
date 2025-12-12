@@ -1299,9 +1299,18 @@ function renderObjectsList() {
 // Calculate optimal groups with tiered thresholds
 function calculateOptimalGroups() {
     if (objects.length === 0) {
-        showNotification('Please add astrogems first.', 'error');
+        showNotification('Please add objects first.', 'error');
         return;
     }
+    
+    console.log('=== STARTING OPTIMIZATION ===');
+    console.log('Total objects:', objects.length);
+    console.log('Objects (sorted by value/cost):', objects.map(o => ({
+        id: o.id,
+        cost: o.cost,
+        value: o.value,
+        ratio: o.valueRatio
+    })).sort((a, b) => b.ratio - a.ratio));
     
     // Reset groups
     groups.forEach(group => {
@@ -1318,165 +1327,332 @@ function calculateOptimalGroups() {
         group.capacity = parseInt(capacityInputs[index].value) || 9;
         group.priority = parseInt(priorityInputs[index].value);
         const tierConfig = getTierConfig(group.capacity);
-        group.targetValue = tierConfig.target;
+        
+        // Check for override target value
+        if (targetOverrideInputs && targetOverrideInputs[index]) {
+            const overrideValue = parseInt(targetOverrideInputs[index].value);
+            if (!isNaN(overrideValue) && overrideValue > 0) {
+                group.targetValue = overrideValue;
+                console.log(`Group ${index + 1}: Using override target ${overrideValue}`);
+            } else {
+                group.targetValue = tierConfig.target;
+                console.log(`Group ${index + 1}: Using tier target ${tierConfig.target} (${tierConfig.name})`);
+            }
+        } else {
+            group.targetValue = tierConfig.target;
+        }
+        
         group.tier = Object.keys(TIERED_THRESHOLDS).find(key => 
             TIERED_THRESHOLDS[key].capacity === group.capacity
         ) || 'EPIC';
     });
     
-    // Sort groups by priority (descending)
-    const sortedGroups = [...groups].sort((a, b) => b.priority - a.priority);
+    console.log('Group configurations:', groups.map(g => ({
+        name: g.name,
+        capacity: g.capacity,
+        target: g.targetValue,
+        priority: g.priority
+    })));
     
-    // Create a copy of objects sorted by value (descending)
-    let availableObjects = [...objects].sort((a, b) => b.value - a.value);
+    // Step 1: Sort objects by value-to-cost ratio (descending)
+    const availableObjects = [...objects]
+        .map(obj => ({ ...obj, assigned: false }))
+        .sort((a, b) => {
+            // First by value-to-cost ratio
+            if (b.valueRatio !== a.valueRatio) {
+                return b.valueRatio - a.valueRatio;
+            }
+            // Then by value (descending)
+            if (b.value !== a.value) {
+                return b.value - a.value;
+            }
+            // Then by cost (ascending)
+            return a.cost - b.cost;
+        });
     
-    // First pass: Try to get each group as close to its target value as possible
-    // Starting with highest priority groups first
+    console.log('Sorted objects for distribution:', availableObjects.map(o => ({
+        id: o.id,
+        value: o.value,
+        cost: o.cost,
+        ratio: o.valueRatio
+    })));
+    
+    // Step 2: Sort groups by priority (descending)
+    const sortedGroups = [...groups].sort((a, b) => {
+        // First by priority
+        if (b.priority !== a.priority) {
+            return b.priority - a.priority;
+        }
+        // Then by target value (descending - higher targets first)
+        return b.targetValue - a.targetValue;
+    });
+    
+    console.log('Sorted groups for distribution:', sortedGroups.map(g => ({
+        name: g.name,
+        priority: g.priority,
+        target: g.targetValue,
+        capacity: g.capacity
+    })));
+    
+    // Step 3: Assign objects to groups using greedy algorithm
+    // We'll try multiple strategies for each group
+    
+    // Strategy 1: Try to reach target exactly with best objects
     for (const group of sortedGroups) {
-        const target = group.targetValue;
+        console.log(`\n=== Processing ${group.name} (Target: ${group.targetValue}, Capacity: ${group.capacity}) ===`);
         
-        // Try different combinations to get close to target
-        // We'll use a greedy approach that tries to add objects without exceeding target too much
+        // Find best combination to reach target
         for (let i = 0; i < availableObjects.length; i++) {
-            const object = availableObjects[i];
-            
-            // Skip if object already assigned
-            if (object.assigned) continue;
-            
-            // Check if we can add this object without exceeding max objects
+            if (availableObjects[i].assigned) continue;
             if (group.objects.length >= group.maxObjects) break;
             
-            // Check if object fits in group capacity
-            if (group.used + object.cost <= group.capacity) {
-                // Calculate what the new value would be
-                const newValue = group.value + object.value;
-                
-                // For groups with capacity < 15 (Epic/Legendary), don't exceed 14
+            const object = availableObjects[i];
+            const newValue = group.value + object.value;
+            const newCost = group.used + object.cost;
+            
+            // Check if we can add this object
+            if (newCost <= group.capacity) {
+                // For groups with capacity < 15, don't exceed 14
                 if (group.capacity < 15 && newValue > 14) {
-                    continue; // Skip this object as it would exceed the limit
+                    console.log(`Skipping object ${object.id} (value: ${object.value}) - would exceed 14 limit`);
+                    continue;
                 }
                 
-                // Check if adding this object gets us closer to target
-                // Or if we're still far from target, add it
-                const currentDiff = Math.abs(target - group.value);
-                const newDiff = Math.abs(target - newValue);
+                // Calculate how close we are to target
+                const currentDiff = Math.abs(group.targetValue - group.value);
+                const newDiff = Math.abs(group.targetValue - newValue);
                 
-                // If it gets us closer to target, add it
-                // Or if we're below target and this doesn't push us too far over
-                if (newDiff <= currentDiff || (group.value < target && newValue <= target * 1.1)) {
-                    // Assign object to group
+                // Prefer adding if it gets us closer to target
+                // OR if we're still far from target (more than 30% away)
+                const isFarFromTarget = group.value < group.targetValue * 0.7;
+                
+                if (newDiff <= currentDiff || isFarFromTarget) {
+                    // Add object
                     group.objects.push(object);
-                    group.used += object.cost;
-                    group.value += object.value;
+                    group.used = newCost;
+                    group.value = newValue;
+                    availableObjects[i].assigned = true;
                     
-                    // Mark object as assigned
-                    object.assigned = true;
+                    console.log(`Added object ${object.id} (value: ${object.value}, cost: ${object.cost}) to ${group.name}`);
+                    console.log(`Group now: value=${group.value}, cost=${group.used}, objects=${group.objects.length}`);
                     
-                    // Remove from available objects array
-                    availableObjects.splice(i, 1);
-                    i--; // Adjust index after removal
+                    // If we reached or exceeded target, move to next group
+                    if (group.value >= group.targetValue) {
+                        console.log(`✓ ${group.name} reached target ${group.targetValue}`);
+                        break;
+                    }
                 }
             }
         }
     }
     
-    // Second pass: For groups that are still below their target, try to add more objects
-    // Sort groups by how far they are from target (groups furthest below target first)
-    const groupsByNeed = [...groups].sort((a, b) => {
-        const aDiff = a.targetValue - a.value;
-        const bDiff = b.targetValue - b.value;
-        // Only consider groups below target
-        if (aDiff > 0 && bDiff > 0) return bDiff - aDiff;
-        if (aDiff > 0) return -1;
-        if (bDiff > 0) return 1;
-        return 0;
-    });
+    // Strategy 2: Fill groups that are below target with remaining objects
+    // Sort groups by how far they are from target (furthest below first)
+    const groupsBelowTarget = groups
+        .filter(g => g.value < g.targetValue && g.objects.length < g.maxObjects)
+        .sort((a, b) => {
+            const aDiff = a.targetValue - a.value;
+            const bDiff = b.targetValue - b.value;
+            return bDiff - aDiff; // Largest deficit first
+        });
     
-    // Reset available objects (only unassigned ones)
-    availableObjects = objects.filter(obj => !obj.assigned).sort((a, b) => b.value - a.value);
+    console.log(`\n=== Filling groups below target ===`);
+    console.log('Groups below target:', groupsBelowTarget.map(g => ({
+        name: g.name,
+        current: g.value,
+        target: g.targetValue,
+        deficit: g.targetValue - g.value
+    })));
     
-    for (const group of groupsByNeed) {
-        // If group is already at or above target, skip
-        if (group.value >= group.targetValue) continue;
+    for (const group of groupsBelowTarget) {
+        console.log(`\nFilling ${group.name} (current: ${group.value}, target: ${group.targetValue})`);
         
-        for (let i = 0; i < availableObjects.length; i++) {
-            const object = availableObjects[i];
-            
-            // Skip if object already assigned
-            if (object.assigned) continue;
-            
-            // Check if we can add this object without exceeding max objects
+        // Get remaining unassigned objects, sorted by value-to-cost ratio
+        const remainingObjects = availableObjects
+            .filter(o => !o.assigned)
+            .sort((a, b) => b.valueRatio - a.valueRatio);
+        
+        for (const object of remainingObjects) {
             if (group.objects.length >= group.maxObjects) break;
             
-            // Check if object fits in group capacity
-            if (group.used + object.cost <= group.capacity) {
-                // For groups with capacity < 15 (Epic/Legendary), don't exceed 14
-                const newValue = group.value + object.value;
+            const newValue = group.value + object.value;
+            const newCost = group.used + object.cost;
+            
+            if (newCost <= group.capacity) {
+                // For groups with capacity < 15, don't exceed 14
                 if (group.capacity < 15 && newValue > 14) {
-                    continue; // Skip this object as it would exceed the limit
+                    continue;
                 }
                 
-                // Assign object to group
+                // Add object
                 group.objects.push(object);
-                group.used += object.cost;
-                group.value += object.value;
-                
-                // Mark object as assigned
+                group.used = newCost;
+                group.value = newValue;
                 object.assigned = true;
                 
-                // Remove from available objects array
-                availableObjects.splice(i, 1);
-                i--; // Adjust index after removal
+                console.log(`Added object ${object.id} (value: ${object.value}, cost: ${object.cost})`);
+                
+                // Stop if we reached target
+                if (group.value >= group.targetValue) {
+                    console.log(`✓ ${group.name} now reached target`);
+                    break;
+                }
             }
         }
     }
     
-    // Third pass: Distribute any remaining objects to groups with capacity
+    // Strategy 3: Distribute any remaining objects to maximize value
     // Sort groups by remaining capacity (descending)
-    const groupsByCapacity = [...groups].sort((a, b) => {
-        const aRemaining = a.capacity - a.used;
-        const bRemaining = b.capacity - b.used;
-        return bRemaining - aRemaining;
-    });
+    const groupsByRemainingCapacity = [...groups]
+        .filter(g => g.objects.length < g.maxObjects)
+        .sort((a, b) => {
+            const aRemaining = a.capacity - a.used;
+            const bRemaining = b.capacity - b.used;
+            return bRemaining - aRemaining;
+        });
     
-    // Get remaining unassigned objects
-    availableObjects = objects.filter(obj => !obj.assigned).sort((a, b) => b.valueRatio - a.valueRatio);
+    console.log(`\n=== Distributing remaining objects ===`);
+    console.log('Groups by remaining capacity:', groupsByRemainingCapacity.map(g => ({
+        name: g.name,
+        remainingCapacity: g.capacity - g.used,
+        slots: g.maxObjects - g.objects.length
+    })));
     
-    for (const object of availableObjects) {
-        for (const group of groupsByCapacity) {
-            // Check if we can add this object without exceeding max objects
+    // Get remaining objects sorted by value-to-cost ratio
+    const finalObjects = availableObjects
+        .filter(o => !o.assigned)
+        .sort((a, b) => b.valueRatio - a.valueRatio);
+    
+    console.log('Remaining objects:', finalObjects.length);
+    
+    for (const object of finalObjects) {
+        for (const group of groupsByRemainingCapacity) {
             if (group.objects.length >= group.maxObjects) continue;
             
-            // Check if object fits in group capacity
-            if (group.used + object.cost <= group.capacity) {
-                // For groups with capacity < 15 (Epic/Legendary), check if adding would exceed 14
-                if (group.capacity < 15 && (group.value + object.value) > 14) {
-                    continue; // Skip for low capacity groups
+            const newValue = group.value + object.value;
+            const newCost = group.used + object.cost;
+            
+            if (newCost <= group.capacity) {
+                // For groups with capacity < 15, don't exceed 14
+                if (group.capacity < 15 && newValue > 14) {
+                    continue;
                 }
                 
-                // Assign object to group
+                // Add object
                 group.objects.push(object);
-                group.used += object.cost;
-                group.value += object.value;
-                
-                // Mark object as assigned
+                group.used = newCost;
+                group.value = newValue;
                 object.assigned = true;
+                
+                console.log(`Added remaining object ${object.id} to ${group.name}`);
                 break;
             }
         }
     }
     
-    // Clear assigned flags for next calculation
-    objects.forEach(obj => delete obj.assigned);
+    // Step 4: Try to optimize further by swapping objects between groups
+    optimizeBySwapping();
+    
+    // Clear assigned flags
+    availableObjects.forEach(obj => delete obj.assigned);
     
     // Update UI with results
+    console.log('\n=== FINAL RESULTS ===');
+    groups.forEach((group, i) => {
+        console.log(`${group.name}: Value=${group.value}, Target=${group.targetValue}, Cost=${group.used}/${group.capacity}, Objects=${group.objects.length}`);
+        console.log('Objects:', group.objects.map(o => `#${o.id} (v:${o.value}, c:${o.cost})`));
+    });
+    
     updateGroupDisplays();
     renderGroupObjects();
     updateSummary();
     saveToLocalStorage();
     
-    showNotification(`Astrogems distributed using tiered thresholds!`, 'success');
+    showNotification(`Optimization complete!`, 'success');
 }
+
+// New optimization function to improve results by swapping objects
+function optimizeBySwapping() {
+    console.log('\n=== OPTIMIZING BY SWAPPING ===');
+    
+    let improvements = 0;
+    const maxIterations = 10;
+    
+    for (let iter = 0; iter < maxIterations; iter++) {
+        let madeImprovement = false;
+        
+        // Try all possible swaps between groups
+        for (let i = 0; i < groups.length; i++) {
+            for (let j = i + 1; j < groups.length; j++) {
+                const groupA = groups[i];
+                const groupB = groups[j];
+                
+                // Try swapping objects between groups
+                for (const objA of groupA.objects) {
+                    for (const objB of groupB.objects) {
+                        // Check if swap is possible
+                        const newCostA = groupA.used - objA.cost + objB.cost;
+                        const newCostB = groupB.used - objB.cost + objA.cost;
+                        
+                        if (newCostA <= groupA.capacity && newCostB <= groupB.capacity) {
+                            // Calculate new values
+                            const newValueA = groupA.value - objA.value + objB.value;
+                            const newValueB = groupB.value - objB.value + objA.value;
+                            
+                            // Calculate how close to targets
+                            const oldDiffA = Math.abs(groupA.targetValue - groupA.value);
+                            const oldDiffB = Math.abs(groupB.targetValue - groupB.value);
+                            const newDiffA = Math.abs(groupA.targetValue - newValueA);
+                            const newDiffB = Math.abs(groupB.targetValue - newValueB);
+                            
+                            // Total improvement
+                            const oldTotalDiff = oldDiffA + oldDiffB;
+                            const newTotalDiff = newDiffA + newDiffB;
+                            
+                            // Also check if it improves value for capacity-limited groups
+                            const oldTotalValue = groupA.value + groupB.value;
+                            const newTotalValue = newValueA + newValueB;
+                            
+                            // Make swap if it improves closeness to targets OR increases total value
+                            if (newTotalDiff < oldTotalDiff || newTotalValue > oldTotalValue) {
+                                // Perform swap
+                                const indexA = groupA.objects.indexOf(objA);
+                                const indexB = groupB.objects.indexOf(objB);
+                                
+                                if (indexA !== -1 && indexB !== -1) {
+                                    // Swap objects
+                                    groupA.objects[indexA] = objB;
+                                    groupB.objects[indexB] = objA;
+                                    
+                                    // Update costs and values
+                                    groupA.used = newCostA;
+                                    groupA.value = newValueA;
+                                    groupB.used = newCostB;
+                                    groupB.value = newValueB;
+                                    
+                                    console.log(`Swap ${iter}.${improvements}: ${groupA.name}#${objA.id} ↔ ${groupB.name}#${objB.id}`);
+                                    console.log(`  ${groupA.name}: ${groupA.value} (was ${groupA.value + objA.value - objB.value})`);
+                                    console.log(`  ${groupB.name}: ${groupB.value} (was ${groupB.value + objB.value - objA.value})`);
+                                    
+                                    improvements++;
+                                    madeImprovement = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (!madeImprovement) {
+            console.log(`No more improvements found after ${iter + 1} iterations`);
+            break;
+        }
+    }
+    
+    console.log(`Total improvements: ${improvements}`);
+}
+
 
 // Update group displays with current values
 function updateGroupDisplays() {
