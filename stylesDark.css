@@ -901,6 +901,57 @@ footer {
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Add these to your CSS */
+.value-perfect {
+    background-color: rgba(46, 204, 113, 0.4) !important;
+    color: #fff !important;
+    border-color: rgba(46, 204, 113, 0.7) !important;
+    box-shadow: 0 0 10px rgba(46, 204, 113, 0.3) !important;
+}
+
+.value-close {
+    background-color: rgba(52, 152, 219, 0.4) !important;
+    color: #fff !important;
+    border-color: rgba(52, 152, 219, 0.7) !important;
+}
+
+.value-acceptable {
+    background-color: rgba(241, 196, 15, 0.4) !important;
+    color: #fff !important;
+    border-color: rgba(241, 196, 15, 0.7) !important;
+}
+
+.value-warning {
+    background-color: rgba(231, 76, 60, 0.4) !important;
+    color: #fff !important;
+    border-color: rgba(231, 76, 60, 0.7) !important;
+}
+
+.value-excess {
+    background-color: rgba(155, 89, 182, 0.4) !important;
+    color: #fff !important;
+    border-color: rgba(155, 89, 182, 0.7) !important;
+}
+
+/* Make the indicators more visible */
+.value-indicator {
+    font-size: 0.85rem;
+    padding: 6px 12px;
+    border-radius: 20px;
+    margin-left: 8px;
+    font-weight: 700;
+    border: 2px solid;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    letter-spacing: 0.3px;
+    transition: all 0.3s ease;
+}
+
+.value-indicator:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+
 /* Preset Slots Styles */
 .preset-controls {
     display: grid;
