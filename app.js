@@ -1666,7 +1666,7 @@ function updateGroupDisplays() {
         const tierConfig = getTierConfig(group.capacity);
         
         // Update capacity display with tier name and color
-        groupCapacityDisplays[index].textContent = `${tierConfig.name}`;
+        groupCapacityDisplays[index].textContent = `${tierConfig.name} (${group.capacity})`;
         groupCapacityDisplays[index].className = tierConfig.colorClass;
         
         groupUsedDisplays[index].textContent = group.used;
@@ -1680,14 +1680,49 @@ function updateGroupDisplays() {
         // Determine which threshold level group is at
         let targetText = `Target: ${target}`;
         
-        if (Math.abs(diff) <= 2) {
-            valueIndicator.textContent = `✓ ${targetText}`;
+        // Define what counts as "close enough" to the target
+        // For Ancient (19): 18-20 is "close", 19 is "perfect"
+        // For Relic (17): 16-18 is "close", 17 is "perfect"
+        // For Epic/Legendary (14): 13-15 is "close", 14 is "perfect"
+        
+        let isCloseEnough = false;
+        let isPerfect = false;
+        
+        if (target === 19) { // Ancient
+            isPerfect = group.value === 19;
+            isCloseEnough = group.value >= 18 && group.value <= 20;
+        } else if (target === 17) { // Relic
+            isPerfect = group.value === 17;
+            isCloseEnough = group.value >= 16 && group.value <= 18;
+        } else if (target === 14) { // Epic/Legendary
+            isPerfect = group.value === 14;
+            isCloseEnough = group.value >= 13 && group.value <= 15;
+        } else { // Custom override targets
+            isPerfect = group.value === target;
+            isCloseEnough = Math.abs(diff) <= 2; // Within ±2
+        }
+        
+        if (isPerfect) {
+            // Perfect hit
+            valueIndicator.textContent = `✓ Perfect ${targetText}`;
+            valueIndicator.className = "value-indicator value-good";
+        } else if (isCloseEnough) {
+            // Close enough (within acceptable range)
+            valueIndicator.textContent = `✓ Close ${targetText}`;
             valueIndicator.className = "value-indicator value-good";
         } else if (diff > 0) {
+            // Above target (but not close enough)
             valueIndicator.textContent = `${targetText}, +${diff} over`;
             valueIndicator.className = "value-indicator value-excess";
         } else {
+            // Below target
             valueIndicator.textContent = `${targetText}, ${Math.abs(diff)} under`;
+            valueIndicator.className = "value-indicator value-warning";
+        }
+        
+        // Special case: For Ancient (19), value of 18 should show as "under"
+        if (target === 19 && group.value === 18) {
+            valueIndicator.textContent = `${targetText}, 1 under`;
             valueIndicator.className = "value-indicator value-warning";
         }
     });
